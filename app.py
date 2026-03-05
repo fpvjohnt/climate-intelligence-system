@@ -2,7 +2,6 @@ import sys
 import os
 import io
 import threading
-from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, render_template, jsonify
 
 # Add project root to path so agents can be imported
@@ -20,6 +19,7 @@ from agents.sea_level_agent import get_sea_level_data
 from agents.us_climate_agent import get_us_climate_data
 from agents.energy_transition_agent import get_energy_transition_data
 from agents.summary_agent import get_summary
+from charts import CHART_REGISTRY
 
 app = Flask(__name__)
 
@@ -97,20 +97,29 @@ AGENTS = {
 DATA_AGENT_KEYS = [k for k in AGENTS if k != "summary"]
 
 
-def capture_agent_output(agent_key):
-    """Run an agent function and capture its printed output (thread-safe)."""
+def run_agent_structured(agent_key):
+    """Run an agent, capture its printed output AND return structured data."""
     agent = AGENTS[agent_key]
     with _stdout_lock:
         old_stdout = sys.stdout
         sys.stdout = buffer = io.StringIO()
         try:
-            agent["func"]()
+            structured = agent["func"]()
         except Exception as exc:
             print(f"Error running agent: {exc}")
+            structured = []
         finally:
             sys.stdout = old_stdout
-    return buffer.getvalue()
+    return buffer.getvalue(), structured or []
 
+
+def capture_agent_output(agent_key):
+    """Run an agent function and capture its printed output (thread-safe)."""
+    text, _ = run_agent_structured(agent_key)
+    return text
+
+
+# ── Page routes ──────────────────────────────────────────────
 
 @app.route("/")
 def dashboard():
@@ -136,6 +145,16 @@ def run_agent_page(agent_key):
     )
 
 
+@app.route("/analytics")
+def analytics_page():
+    chart_list = [
+        {"key": k, "title": v["title"]} for k, v in CHART_REGISTRY.items()
+    ]
+    return render_template("analytics.html", charts=chart_list)
+
+
+# ── JSON API routes ──────────────────────────────────────────
+
 @app.route("/api/run/<agent_key>")
 def api_run_agent(agent_key):
     if agent_key not in AGENTS:
@@ -155,6 +174,30 @@ def api_run_all():
             "output": capture_agent_output(key),
         }
     return jsonify(results)
+
+
+@app.route("/api/chart/<chart_key>")
+def api_chart(chart_key):
+    """Run the agent for a chart, generate the chart, return base64 PNG."""
+    if chart_key not in CHART_REGISTRY:
+        return jsonify({"error": "Chart not found"}), 404
+
+    entry = CHART_REGISTRY[chart_key]
+    agent_key = entry["agent"]
+
+    # Run agent and get structured data
+    _, data = run_agent_structured(agent_key)
+
+    # Generate chart
+    img_b64 = entry["func"](data)
+    if img_b64 is None:
+        return jsonify({"error": "No data available for chart"}), 404
+
+    return jsonify({
+        "chart": chart_key,
+        "title": entry["title"],
+        "image": img_b64,
+    })
 
 
 @app.route("/api/status")

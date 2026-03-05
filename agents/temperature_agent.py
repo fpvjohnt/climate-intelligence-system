@@ -1,8 +1,9 @@
 import requests
 
+
 def get_temperature_data():
     print("🌡️ Temperature Agent running...")
-    
+
     locations = [
         # North America
         {"name": "Los Angeles, USA", "lat": 34.05, "lon": -118.24},
@@ -25,9 +26,10 @@ def get_temperature_data():
         {"name": "Sydney, Australia", "lat": -33.87, "lon": 151.21},
         {"name": "Auckland, New Zealand", "lat": -36.85, "lon": 174.76},
     ]
-    
+
     print(f"✅ Pulling temperatures for {len(locations)} global cities\n")
-    
+
+    results = []
     for loc in locations:
         url = "https://api.open-meteo.com/v1/forecast"
         params = {
@@ -39,22 +41,31 @@ def get_temperature_data():
             "forecast_days": 1,
             "temperature_unit": "fahrenheit"
         }
-        
+
         response = requests.get(url, params=params, timeout=15)
-        
+
         if response.status_code == 200:
             data = response.json()
             daily = data.get("daily", {})
             dates = daily.get("time", [])
             temp_max = daily.get("temperature_2m_max", [])
             temp_min = daily.get("temperature_2m_min", [])
-            
+
             print(f"📍 {loc['name']}")
             for i in range(len(dates)):
                 print(f"  {dates[i]}: High {temp_max[i]}°F | Low {temp_min[i]}°F")
+                results.append({
+                    "city": loc["name"],
+                    "date": dates[i],
+                    "temp_max": temp_max[i],
+                    "temp_min": temp_min[i],
+                })
             print()
         else:
             print(f"❌ Error for {loc['name']}: {response.status_code}")
+
+    return results
+
 
 if __name__ == "__main__":
     get_temperature_data()

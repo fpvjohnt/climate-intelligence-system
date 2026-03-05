@@ -1,8 +1,9 @@
 import requests
 
+
 def get_us_climate_data():
     print("🇺🇸 US Climate Agent running...")
-    
+
     locations = [
         {"name": "Los Angeles, CA", "lat": 34.05, "lon": -118.24},
         {"name": "San Francisco, CA", "lat": 37.77, "lon": -122.41},
@@ -15,9 +16,10 @@ def get_us_climate_data():
         {"name": "Denver, CO", "lat": 39.74, "lon": -104.98},
         {"name": "New Orleans, LA", "lat": 29.95, "lon": -90.07},
     ]
-    
+
     print(f"✅ Pulling climate data for {len(locations)} US cities\n")
-    
+
+    results = []
     for loc in locations:
         url = "https://api.open-meteo.com/v1/forecast"
         params = {
@@ -31,9 +33,9 @@ def get_us_climate_data():
             "windspeed_unit": "mph",
             "precipitation_unit": "inch"
         }
-        
+
         response = requests.get(url, params=params, timeout=15)
-        
+
         if response.status_code == 200:
             data = response.json()
             daily = data.get("daily", {})
@@ -42,13 +44,24 @@ def get_us_climate_data():
             temp_min = daily.get("temperature_2m_min", [])
             precip = daily.get("precipitation_sum", [])
             wind = daily.get("windspeed_10m_max", [])
-            
+
             print(f"📍 {loc['name']}")
             for i in range(len(dates)):
                 print(f"  {dates[i]}: High {temp_max[i]}°F | Low {temp_min[i]}°F | Rain {precip[i]}in | Wind {wind[i]}mph")
+                results.append({
+                    "city": loc["name"],
+                    "date": dates[i],
+                    "temp_max": temp_max[i],
+                    "temp_min": temp_min[i],
+                    "precip": precip[i],
+                    "wind": wind[i],
+                })
             print()
         else:
             print(f"❌ Error for {loc['name']}: {response.status_code}")
+
+    return results
+
 
 if __name__ == "__main__":
     get_us_climate_data()

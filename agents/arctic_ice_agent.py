@@ -1,8 +1,9 @@
 import requests
 
+
 def get_arctic_ice_data():
     print("🧊 Arctic Ice Agent running...")
-    
+
     locations = [
         {"name": "Arctic Ocean", "lat": 85.0, "lon": 0.0},
         {"name": "Greenland", "lat": 72.0, "lon": -40.0},
@@ -11,9 +12,10 @@ def get_arctic_ice_data():
         {"name": "Canadian Arctic", "lat": 75.0, "lon": -95.0},
         {"name": "Antarctic Peninsula", "lat": -65.0, "lon": -64.0},
     ]
-    
+
     print(f"✅ Pulling arctic conditions for {len(locations)} polar regions\n")
-    
+
+    results = []
     for loc in locations:
         url = "https://api.open-meteo.com/v1/forecast"
         params = {
@@ -25,9 +27,9 @@ def get_arctic_ice_data():
             "forecast_days": 1,
             "temperature_unit": "fahrenheit"
         }
-        
+
         response = requests.get(url, params=params, timeout=15)
-        
+
         if response.status_code == 200:
             data = response.json()
             daily = data.get("daily", {})
@@ -35,13 +37,23 @@ def get_arctic_ice_data():
             temp_max = daily.get("temperature_2m_max", [])
             temp_min = daily.get("temperature_2m_min", [])
             snowfall = daily.get("snowfall_sum", [])
-            
+
             print(f"📍 {loc['name']}")
             for i in range(len(dates)):
                 print(f"  {dates[i]}: High {temp_max[i]}°F | Low {temp_min[i]}°F | Snow {snowfall[i]}mm")
+                results.append({
+                    "region": loc["name"],
+                    "date": dates[i],
+                    "temp_max": temp_max[i],
+                    "temp_min": temp_min[i],
+                    "snowfall": snowfall[i],
+                })
             print()
         else:
             print(f"❌ Error for {loc['name']}: {response.status_code}")
+
+    return results
+
 
 if __name__ == "__main__":
     get_arctic_ice_data()

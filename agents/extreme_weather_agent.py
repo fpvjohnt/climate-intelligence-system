@@ -1,8 +1,9 @@
 import requests
 
+
 def get_extreme_weather_data():
     print("🌪️ Extreme Weather Agent running...")
-    
+
     # Global cities to monitor
     locations = [
         {"name": "New York, USA", "lat": 40.71, "lon": -74.01},
@@ -11,9 +12,10 @@ def get_extreme_weather_data():
         {"name": "Sydney, Australia", "lat": -33.87, "lon": 151.21},
         {"name": "Mumbai, India", "lat": 19.08, "lon": 72.88},
     ]
-    
+
     print(f"✅ Pulling weather for {len(locations)} global cities\n")
-    
+
+    results = []
     for loc in locations:
         url = "https://api.open-meteo.com/v1/forecast"
         params = {
@@ -27,22 +29,33 @@ def get_extreme_weather_data():
             "windspeed_unit": "mph",
             "precipitation_unit": "inch"
         }
-        
+
         response = requests.get(url, params=params, timeout=15)
-        
+
         if response.status_code == 200:
             data = response.json()
             daily = data.get("daily", {})
             dates = daily.get("time", [])
             precip = daily.get("precipitation_sum", [])
             temp = daily.get("temperature_2m_max", [])
-            
+            wind = daily.get("windspeed_10m_max", [])
+
             print(f"📍 {loc['name']}")
             for i in range(len(dates)):
                 print(f"  {dates[i]}: {temp[i]}°F | {precip[i]}in rain")
+                results.append({
+                    "city": loc["name"],
+                    "date": dates[i],
+                    "temp_max": temp[i],
+                    "precip": precip[i],
+                    "wind": wind[i] if i < len(wind) else None,
+                })
             print()
         else:
             print(f"❌ Error for {loc['name']}: {response.status_code}")
+
+    return results
+
 
 if __name__ == "__main__":
     get_extreme_weather_data()
