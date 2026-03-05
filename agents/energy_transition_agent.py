@@ -20,7 +20,7 @@ def get_energy_transition_data(api_key):
         "length": 50
     }
     
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=15)
     
     if response.status_code == 200:
         data = response.json()

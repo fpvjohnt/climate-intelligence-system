@@ -46,7 +46,7 @@ def get_global_climate_data():
             "precipitation_unit": "inch"
         }
         
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=15)
         
         if response.status_code == 200:
             data = response.json()

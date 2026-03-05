@@ -39,7 +39,7 @@ def get_emissions_data():
             "forecast_days": 1
         }
         
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=15)
         
         if response.status_code == 200:
             data = response.json()

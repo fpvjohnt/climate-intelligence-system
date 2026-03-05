@@ -1,4 +1,5 @@
 import requests
+from datetime import datetime
 
 def get_sea_level_data():
     print("🌊 Sea Level Agent running...")
@@ -32,20 +33,21 @@ def get_sea_level_data():
             "units": "metric",
             "time_zone": "GMT",
             "format": "json",
-            "begin_date": "20230101",
-            "end_date": "20231231"
+            "begin_date": f"{datetime.now().year}0101",
+            "end_date": f"{datetime.now().year}1231"
         }
-        
-        response = requests.get(url, params=params)
+
+        response = requests.get(url, params=params, timeout=15)
         
         if response.status_code == 200:
             data = response.json()
             results = data.get("data", [])
             if results:
                 latest = results[-1]
-                values = list(latest.values())
+                month = latest.get("year", "N/A")
+                height = latest.get("MSL", latest.get("highest", "N/A"))
                 print(f"📍 {station['name']}")
-                print(f"  {values[0]}: {values[1]} meters above MSL")
+                print(f"  {month}: {height} meters above MSL")
                 print()
             else:
                 error = data.get("error", {}).get("message", "No data")

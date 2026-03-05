@@ -2,6 +2,7 @@ import sys
 import os
 import io
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, render_template, jsonify
 
 # Add project root to path so agents can be imported
@@ -21,6 +22,9 @@ from agents.energy_transition_agent import get_energy_transition_data
 from agents.summary_agent import get_summary
 
 app = Flask(__name__)
+
+# Lock to prevent concurrent stdout capture from clobbering each other
+_stdout_lock = threading.Lock()
 
 # Registry of all available agents
 AGENTS = {
@@ -89,18 +93,22 @@ AGENTS = {
     },
 }
 
+# Agent keys that represent individual data agents (excludes summary)
+DATA_AGENT_KEYS = [k for k in AGENTS if k != "summary"]
+
 
 def capture_agent_output(agent_key):
-    """Run an agent function and capture its printed output."""
+    """Run an agent function and capture its printed output (thread-safe)."""
     agent = AGENTS[agent_key]
-    old_stdout = sys.stdout
-    sys.stdout = buffer = io.StringIO()
-    try:
-        agent["func"]()
-    except Exception as exc:
-        print(f"Error running agent: {exc}")
-    finally:
-        sys.stdout = old_stdout
+    with _stdout_lock:
+        old_stdout = sys.stdout
+        sys.stdout = buffer = io.StringIO()
+        try:
+            agent["func"]()
+        except Exception as exc:
+            print(f"Error running agent: {exc}")
+        finally:
+            sys.stdout = old_stdout
     return buffer.getvalue()
 
 
@@ -134,6 +142,28 @@ def api_run_agent(agent_key):
         return jsonify({"error": "Agent not found"}), 404
     output = capture_agent_output(agent_key)
     return jsonify({"agent": agent_key, "output": output})
+
+
+@app.route("/api/run-all")
+def api_run_all():
+    """Run all data agents and return combined results."""
+    results = {}
+    for key in DATA_AGENT_KEYS:
+        results[key] = {
+            "name": AGENTS[key]["name"],
+            "icon": AGENTS[key]["icon"],
+            "output": capture_agent_output(key),
+        }
+    return jsonify(results)
+
+
+@app.route("/api/status")
+def api_status():
+    """Return list of agents with metadata (no execution)."""
+    return jsonify({
+        k: {"name": v["name"], "icon": v["icon"], "description": v["description"]}
+        for k, v in AGENTS.items() if k != "summary"
+    })
 
 
 if __name__ == "__main__":
