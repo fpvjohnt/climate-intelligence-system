@@ -20,8 +20,8 @@ def get_energy_transition_data(api_key):
         "length": 50
     }
     
-    response = requests.get(url, params=params)
-    
+    response = requests.get(url, params=params, timeout=30)
+
     if response.status_code == 200:
         data = response.json()
         results = data.get("response", {}).get("data", [])
@@ -62,4 +62,7 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv("../config/.env")
     api_key = os.getenv("EIA_API_KEY")
-    get_energy_transition_data(api_key)
+    if not api_key:
+        print("❌ EIA_API_KEY not set. Check config/.env")
+    else:
+        get_energy_transition_data(api_key)

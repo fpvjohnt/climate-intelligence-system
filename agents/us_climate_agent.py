@@ -1,20 +1,10 @@
 import requests
+from locations import US_CITIES
 
 def get_us_climate_data():
     print("🇺🇸 US Climate Agent running...")
-    
-    locations = [
-        {"name": "Los Angeles, CA", "lat": 34.05, "lon": -118.24},
-        {"name": "San Francisco, CA", "lat": 37.77, "lon": -122.41},
-        {"name": "New York, NY", "lat": 40.71, "lon": -74.01},
-        {"name": "Miami, FL", "lat": 25.77, "lon": -80.19},
-        {"name": "Chicago, IL", "lat": 41.88, "lon": -87.63},
-        {"name": "Houston, TX", "lat": 29.76, "lon": -95.37},
-        {"name": "Phoenix, AZ", "lat": 33.45, "lon": -112.07},
-        {"name": "Seattle, WA", "lat": 47.61, "lon": -122.33},
-        {"name": "Denver, CO", "lat": 39.74, "lon": -104.98},
-        {"name": "New Orleans, LA", "lat": 29.95, "lon": -90.07},
-    ]
+
+    locations = US_CITIES
     
     print(f"✅ Pulling climate data for {len(locations)} US cities\n")
     
@@ -32,8 +22,8 @@ def get_us_climate_data():
             "precipitation_unit": "inch"
         }
         
-        response = requests.get(url, params=params)
-        
+        response = requests.get(url, params=params, timeout=30)
+
         if response.status_code == 200:
             data = response.json()
             daily = data.get("daily", {})
